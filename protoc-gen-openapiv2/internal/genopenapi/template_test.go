@@ -94,7 +94,6 @@ func TestMessageToQueryParametersWithEnumAsInt(t *testing.T) {
 		Message  string
 		Params   []openapiParameterObject
 	}
-
 	tests := []test{
 		{
 			MsgDescs: []*descriptorpb.DescriptorProto{
@@ -487,7 +486,7 @@ func TestMessageToQueryParameters(t *testing.T) {
 						{
 							Name:   proto.String("c"),
 							Type:   descriptorpb.FieldDescriptorProto_TYPE_STRING.Enum(),
-							Label:  descriptorpb.FieldDescriptorProto_LABEL_REPEATED.Enum(),
+							Label:  descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL.Enum(),
 							Number: proto.Int32(3),
 						},
 					},
@@ -509,11 +508,10 @@ func TestMessageToQueryParameters(t *testing.T) {
 					Format:   "double",
 				},
 				{
-					Name:             "c",
-					In:               "query",
-					Required:         false,
-					Type:             "array",
-					CollectionFormat: "multi",
+					Name:     "c",
+					In:       "query",
+					Required: false,
+					Type:     "string",
 				},
 			},
 		},
@@ -596,6 +594,133 @@ func TestMessageToQueryParameters(t *testing.T) {
 				},
 			},
 		},
+		{
+			MsgDescs: []*descriptorpb.DescriptorProto{
+				{
+					Options: descriptorpb.MessageOptions{
+						MessageSetWireFormat:         nil,
+						NoStandardDescriptorAccessor: nil,
+						Deprecated:                   nil,
+						MapEntry:                     proto.Bool(true),
+						UninterpretedOption:          nil,
+					},
+					Name: proto.String("ExampleMessage"),
+					Field: []*descriptorpb.FieldDescriptorProto{
+						{
+							Name:   proto.String("a"),
+							Type:   descriptorpb.FieldDescriptorProto_TYPE_INT64.Enum(),
+							Label:  descriptorpb.FieldDescriptorProto_LABEL_REPEATED.Enum(),
+							Number: proto.Int32(1),
+						},
+						{
+							Name:   proto.String("b"),
+							Type:   descriptorpb.FieldDescriptorProto_TYPE_DOUBLE.Enum(),
+							Label:  descriptorpb.FieldDescriptorProto_LABEL_REPEATED.Enum(),
+							Number: proto.Int32(2),
+						},
+						{
+							Name:   proto.String("c"),
+							Type:   descriptorpb.FieldDescriptorProto_TYPE_STRING.Enum(),
+							Label:  descriptorpb.FieldDescriptorProto_LABEL_REPEATED.Enum(),
+							Number: proto.Int32(3),
+						},
+					},
+				},
+			},
+			Message: "ExampleMessage",
+			Params: []openapiParameterObject{
+				{
+					Name:     "a",
+					In:       "query",
+					Required: false,
+					Type:     "array",
+					Items: &openapiItemsObject{
+						schemaCore:           schemaCore{Type: "string", Format: "int64"},
+						Properties:           nil,
+						AdditionalProperties: nil,
+						Description:          "",
+						Title:                "",
+						ExternalDocs:         nil,
+						ReadOnly:             false,
+						MultipleOf:           0,
+						Maximum:              0,
+						ExclusiveMaximum:     false,
+						Minimum:              0,
+						ExclusiveMinimum:     false,
+						MaxLength:            0,
+						MinLength:            0,
+						Pattern:              "",
+						MaxItems:             0,
+						MinItems:             0,
+						UniqueItems:          false,
+						MaxProperties:        0,
+						MinProperties:        0,
+						Required:             nil,
+					},
+					CollectionFormat: "multi",
+				},
+				{
+					Name:     "b",
+					In:       "query",
+					Required: false,
+					Type:     "array",
+					Items: &openapiItemsObject{
+						schemaCore:           schemaCore{Type: "number", Format: "double"},
+						Properties:           nil,
+						AdditionalProperties: nil,
+						Description:          "",
+						Title:                "",
+						ExternalDocs:         nil,
+						ReadOnly:             false,
+						MultipleOf:           0,
+						Maximum:              0,
+						ExclusiveMaximum:     false,
+						Minimum:              0,
+						ExclusiveMinimum:     false,
+						MaxLength:            0,
+						MinLength:            0,
+						Pattern:              "",
+						MaxItems:             0,
+						MinItems:             0,
+						UniqueItems:          false,
+						MaxProperties:        0,
+						MinProperties:        0,
+						Required:             nil,
+					},
+					CollectionFormat: "multi",
+				},
+				{
+					Name:     "c",
+					In:       "query",
+					Required: false,
+					Type:     "array",
+					Items: &openapiItemsObject{
+						schemaCore:           schemaCore{Type: "string"},
+						Properties:           nil,
+						AdditionalProperties: nil,
+						Description:          "",
+						Title:                "",
+						ExternalDocs:         nil,
+						ReadOnly:             false,
+						MultipleOf:           2,
+						Maximum:              1,
+						ExclusiveMaximum:     false,
+						Minimum:              10,
+						ExclusiveMinimum:     false,
+						MaxLength:            20,
+						MinLength:            1,
+						Pattern:              "^[0-9]+$",
+						MaxItems:             10,
+						MinItems:             1,
+						UniqueItems:          true,
+						MaxProperties:        10,
+						MinProperties:        1,
+						Required:             nil,
+					},
+					CollectionFormat: "multi",
+				},
+			},
+		},
 	}
 
 	for _, test := range tests {
@@ -638,9 +763,9 @@ func TestMessageToQueryParameters(t *testing.T) {
 			t.Fatalf("failed to convert message to query parameters: %s", err)
 		}
 		// avoid checking Items for array types
-		for i := range params {
-			params[i].Items = nil
-		}
+		//for i := range params {
+		//	params[i].Items = nil
+		//}
 		if !reflect.DeepEqual(params, test.Params) {
 			t.Errorf("expected %v, got %v", test.Params, params)
 		}
@@ -3508,7 +3633,27 @@ func TestSchemaOfField(t *testing.T) {
 				schemaCore: schemaCore{
 					Type: "array",
 					Items: &openapiItemsObject{
-						Type: "string",
+						schemaCore:           schemaCore{Type: "string"},
+						Properties:           nil,
+						AdditionalProperties: nil,
+						Description:          "",
+						Title:                "",
+						ExternalDocs:         nil,
+						ReadOnly:             false,
+						MultipleOf:           0,
+						Maximum:              0,
+						ExclusiveMaximum:     false,
+						Minimum:              0,
+						ExclusiveMinimum:     false,
+						MaxLength:            0,
+						MinLength:            0,
+						Pattern:              "",
+						MaxItems:             0,
+						MinItems:             0,
+						UniqueItems:          false,
+						MaxProperties:        0,
+						MinProperties:        0,
+						Required:             nil,
 					},
 				},
 			},
@@ -3588,8 +3733,7 @@ func TestSchemaOfField(t *testing.T) {
 				schemaCore: schemaCore{
 					Type: "array",
 					Items: &openapiItemsObject{
-						Type: "string",
-					},
+						schemaCore: schemaCore{Type: "string"}},
 				},
 			},
 		},
@@ -3762,9 +3906,9 @@ func TestSchemaOfField(t *testing.T) {
 			expected: openapiSchemaObject{
 				schemaCore: schemaCore{
 					Type: "array",
-					Items: (*openapiItemsObject)(&schemaCore{
-						Type: "object",
-					}),
+					Items: &openapiItemsObject{
+						schemaCore: schemaCore{Type: "object"},
+					},
 				},
 			},
 		},
@@ -3832,8 +3976,10 @@ func TestSchemaOfField(t *testing.T) {
 			refs: make(refMap),
 			expected: openapiSchemaObject{
 				schemaCore: schemaCore{
-					Type:  "array",
-					Items: (*openapiItemsObject)(&schemaCore{Type: "string"}),
+					Type: "array",
+					Items: &openapiItemsObject{
+						schemaCore: schemaCore{Type: "string"},
+					},
 				},
 				Title:       "field title",
 				Description: "field description",
@@ -3925,9 +4071,10 @@ func TestSchemaOfField(t *testing.T) {
 			refs: make(refMap),
 			expected: openapiSchemaObject{
 				schemaCore: schemaCore{
-					Type:  "array",
-					Items: (*openapiItemsObject)(&schemaCore{Type: "string"}),
-				},
+					Type: "array",
+					Items: &openapiItemsObject{
+						schemaCore: schemaCore{Type: "string"},
+					}},
 				Title:       "field title",
 				Description: "field description",
 			},

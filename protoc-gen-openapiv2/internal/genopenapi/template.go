@@ -94,9 +94,9 @@ var wktSchemas = map[string]schemaCore{
 	},
 	".google.protobuf.ListValue": {
 		Type: "array",
-		Items: (*openapiItemsObject)(&schemaCore{
-			Type: "object",
-		}),
+		Items: &openapiItemsObject{
+			schemaCore: schemaCore{Type: "object"},
+		},
 	},
 	".google.protobuf.NullValue": {
 		Type: "string",
@@ -253,16 +253,19 @@ func nestedQueryParams(message *descriptor.Message, field *descriptor.Field, pre
 				break
 			}
 		}
-
 		param := openapiParameterObject{
-			Description: desc,
-			In:          "query",
-			Default:     schema.Default,
-			Type:        schema.Type,
-			Items:       schema.Items,
-			Format:      schema.Format,
-			Pattern:     schema.Pattern,
-			Required:    required,
+			Name:             "",
+			Description:      desc,
+			In:               "query",
+			Required:         required,
+			Type:             schema.Type,
+			Format:           schema.Format,
+			Items:            schema.Items,
+			Enum:             schema.Enum,
+			CollectionFormat: "",
+			Default:          schema.Default,
+			Pattern:          schema.Pattern,
+			Schema:           nil,
 		}
 		if param.Type == "array" {
 			param.CollectionFormat = "multi"
@@ -277,8 +280,8 @@ func nestedQueryParams(message *descriptor.Message, field *descriptor.Field, pre
 			}
 			if items != nil { // array
 				param.Items = &openapiItemsObject{
-					Type: "string",
-					Enum: listEnumNames(reg, enum),
+					schemaCore: schemaCore{Type: "string",
+						Enum: listEnumNames(reg, enum)},
 				}
 				if reg.GetEnumsAsInts() {
 					param.Items.Type = "integer"
@@ -413,10 +416,12 @@ func renderMessageAsDefinition(msg *descriptor.Message, reg *descriptor.Registry
 		protoSchema := openapiSchemaFromProtoSchema(opts, reg, customRefs, msg)
 
 		// Warning: Make sure not to overwrite any fields already set on the schema type.
+
 		schema.ExternalDocs = protoSchema.ExternalDocs
 		schema.ReadOnly = protoSchema.ReadOnly
 		schema.MultipleOf = protoSchema.MultipleOf
 		schema.Maximum = protoSchema.Maximum
+		schema.Items = protoSchema.Items
 		schema.ExclusiveMaximum = protoSchema.ExclusiveMaximum
 		schema.Minimum = protoSchema.Minimum
 		schema.ExclusiveMinimum = protoSchema.ExclusiveMinimum
@@ -604,8 +609,30 @@ func schemaOfField(f *descriptor.Field, reg *descriptor.Registry, refs refMap) o
 	case array:
 		ret = openapiSchemaObject{
 			schemaCore: schemaCore{
-				Type:  "array",
-				Items: (*openapiItemsObject)(&core),
+				Type: "array",
+				Items: &openapiItemsObject{
+					schemaCore:           core,
+					Properties:           nil,
+					AdditionalProperties: nil,
+					Description:          "",
+					Title:                "",
+					ExternalDocs:         nil,
+					ReadOnly:             false,
+					MultipleOf:           0,
+					Maximum:              0,
+					ExclusiveMaximum:     false,
+					Minimum:              0,
+					ExclusiveMinimum:     false,
+					MaxLength:            0,
+					MinLength:            0,
+					Pattern:              "",
+					MaxItems:             0,
+					MinItems:             0,
+					UniqueItems:          false,
+					MaxProperties:        0,
+					MinProperties:        0,
+					Required:             nil,
+				},
 			},
 		}
 	case object:
@@ -975,7 +1002,7 @@ func renderServices(services []*descriptor.Service, paths openapiPathsObject, re
 							core.Enum = enumNames
 							enumNames = s
 						}
-						items = (*openapiItemsObject)(&core)
+						items = &openapiItemsObject{schemaCore: core}
 						paramType = "array"
 						paramFormat = ""
 						collectionFormat = reg.GetRepeatedPathParamSeparatorName()
@@ -2311,27 +2338,40 @@ func updateswaggerObjectFromJSONSchema(s *openapiSchemaObject, j *openapi_option
 		s.Title = goTemplateComments(s.Title, data, reg)
 		s.Description = goTemplateComments(s.Description, data, reg)
 	}
-
-	s.ReadOnly = j.GetReadOnly()
-	s.MultipleOf = j.GetMultipleOf()
-	s.Maximum = j.GetMaximum()
-	s.ExclusiveMaximum = j.GetExclusiveMaximum()
-	s.Minimum = j.GetMinimum()
-	s.ExclusiveMinimum = j.GetExclusiveMinimum()
-	s.MaxLength = j.GetMaxLength()
-	s.MinLength = j.GetMinLength()
-	s.Pattern = j.GetPattern()
-	s.Default = j.GetDefault()
-	s.MaxItems = j.GetMaxItems()
-	s.MinItems = j.GetMinItems()
-	s.UniqueItems = j.GetUniqueItems()
-	s.MaxProperties = j.GetMaxProperties()
-	s.MinProperties = j.GetMinProperties()
-	s.Required = j.GetRequired()
-	s.Enum = j.GetEnum()
 	if overrideType := j.GetType(); len(overrideType) > 0 {
 		s.Type = strings.ToLower(overrideType[0].String())
 	}
+	if s.Type == "array" {
+		s.Items.MaxLength = j.GetMaxLength()
+		s.Items.MinLength = j.GetMinLength()
+		s.Items.Pattern = j.GetPattern()
+		s.Items.Default = j.GetDefault()
+		s.Items.UniqueItems = j.GetUniqueItems()
+		s.Items.MaxProperties = j.GetMaxProperties()
+		s.Items.MinProperties = j.GetMinProperties()
+		s.Items.Required = j.GetRequired()
+		s.Items.Minimum = j.GetMinimum()
+		s.Items.Maximum = j.GetMaximum()
+		s.Items.ReadOnly = j.GetReadOnly()
+		s.Items.MultipleOf = j.GetMultipleOf()
+		s.Items.ExclusiveMaximum = j.GetExclusiveMaximum()
+		s.Items.ExclusiveMinimum = j.GetExclusiveMinimum()
+	} else {
+		s.ReadOnly = j.GetReadOnly()
+		s.MultipleOf = j.GetMultipleOf()
+		s.Maximum = j.GetMaximum()
+		s.ExclusiveMaximum = j.GetExclusiveMaximum()
+		s.Minimum = j.GetMinimum()
+		s.ExclusiveMinimum = j.GetExclusiveMinimum()
+		s.UniqueItems = j.GetUniqueItems()
+		s.MaxProperties = j.GetMaxProperties()
+		s.MinProperties = j.GetMinProperties()
+		s.Required = j.GetRequired()
+	}
+	s.MaxItems = j.GetMaxItems()
+	s.MinItems = j.GetMinItems()
+	s.Enum = j.GetEnum()
+
 	if j != nil && j.GetExample() != "" {
 		s.Example = json.RawMessage(j.GetExample())
 	}
