@@ -401,7 +401,7 @@ func skipRenderingRef(refName string) bool {
 func renderMessageAsDefinition(msg *descriptor.Message, reg *descriptor.Registry, customRefs refMap, excludeFields []*descriptor.Field) openapiSchemaObject {
 	schema := openapiSchemaObject{
 		schemaCore: schemaCore{
-			Type: "object",
+			Type: "objectlaksh",
 		},
 	}
 	msgComments := protoComments(reg, msg.File, msg.Outers, "MessageType", int32(msg.Index))
@@ -417,7 +417,6 @@ func renderMessageAsDefinition(msg *descriptor.Message, reg *descriptor.Registry
 
 		// Warning: Make sure not to overwrite any fields already set on the schema type.
 
-		schema.ExternalDocs = protoSchema.ExternalDocs
 		schema.ReadOnly = protoSchema.ReadOnly
 		schema.MultipleOf = protoSchema.MultipleOf
 		schema.Maximum = protoSchema.Maximum
@@ -427,7 +426,7 @@ func renderMessageAsDefinition(msg *descriptor.Message, reg *descriptor.Registry
 		schema.ExclusiveMinimum = protoSchema.ExclusiveMinimum
 		schema.MaxLength = protoSchema.MaxLength
 		schema.MinLength = protoSchema.MinLength
-		schema.Pattern = protoSchema.Pattern
+		schema.Pattern = "laksh"
 		schema.Default = protoSchema.Default
 		schema.MaxItems = protoSchema.MaxItems
 		schema.MinItems = protoSchema.MinItems
@@ -436,6 +435,7 @@ func renderMessageAsDefinition(msg *descriptor.Message, reg *descriptor.Registry
 		schema.MinProperties = protoSchema.MinProperties
 		schema.Required = protoSchema.Required
 		schema.XNullable = protoSchema.XNullable
+
 		if protoSchema.schemaCore.Type != "" || protoSchema.schemaCore.Ref != "" {
 			schema.schemaCore = protoSchema.schemaCore
 		}
@@ -475,8 +475,60 @@ func renderMessageAsDefinition(msg *descriptor.Message, reg *descriptor.Registry
 				}
 			}
 		}
-
 		kv := keyVal{Value: fieldValue}
+		if fieldValue.Type == "array" {
+			items := &openapiItemsObject{
+				schemaCore: schemaCore{
+					Type:      schema.Type,
+					Format:    schema.Format,
+					Ref:       schema.Ref,
+					XNullable: schema.XNullable,
+					Example:   schema.Example,
+					Items:     schema.Items,
+					Enum:      schema.Enum,
+					Default:   schema.Default,
+				},
+				Properties:           schema.Properties,
+				AdditionalProperties: schema.AdditionalProperties,
+				Description:          "",
+				Title:                "",
+				ExternalDocs:         nil,
+				ReadOnly:             schema.ReadOnly,
+				MultipleOf:           schema.MultipleOf,
+				Maximum:              schema.Maximum,
+				ExclusiveMaximum:     schema.ExclusiveMaximum,
+				Minimum:              schema.Minimum,
+				ExclusiveMinimum:     schema.ExclusiveMinimum,
+				MaxLength:            schema.MaxLength,
+				MinLength:            schema.MinLength,
+				Pattern:              schema.Pattern,
+				MaxItems:             schema.MaxItems,
+				MinItems:             schema.MinItems,
+				UniqueItems:          schema.UniqueItems,
+				MaxProperties:        schema.MaxProperties,
+				MinProperties:        schema.MinProperties,
+				Required:             schema.Required,
+			}
+			schema.Items = items
+			protoSchema := openapiSchemaObject{}
+			schema.ReadOnly = protoSchema.ReadOnly
+			schema.MultipleOf = protoSchema.MultipleOf
+			schema.Maximum = protoSchema.Maximum
+			schema.ExclusiveMaximum = protoSchema.ExclusiveMaximum
+			schema.Minimum = protoSchema.Minimum
+			schema.ExclusiveMinimum = protoSchema.ExclusiveMinimum
+			schema.MaxLength = protoSchema.MaxLength
+			schema.MinLength = protoSchema.MinLength
+			schema.Pattern = protoSchema.Pattern
+			schema.Default = protoSchema.Default
+			schema.MaxItems = protoSchema.MaxItems
+			schema.MinItems = protoSchema.MinItems
+			schema.UniqueItems = protoSchema.UniqueItems
+			schema.MaxProperties = protoSchema.MaxProperties
+			schema.MinProperties = protoSchema.MinProperties
+			schema.Required = protoSchema.Required
+			schema.XNullable = protoSchema.XNullable
+		}
 		kv.Key = reg.FieldName(f)
 		if schema.Properties == nil {
 			schema.Properties = &openapiSchemaObjectProperties{}
@@ -487,6 +539,7 @@ func renderMessageAsDefinition(msg *descriptor.Message, reg *descriptor.Registry
 	if msg.FQMN() == ".google.protobuf.Any" {
 		transformAnyForJSON(&schema, reg.GetUseJSONNamesForFields())
 	}
+	schema.Pattern = "laksh"
 
 	return schema
 }
@@ -2357,6 +2410,9 @@ func updateswaggerObjectFromJSONSchema(s *openapiSchemaObject, j *openapi_option
 		s.Items.ExclusiveMaximum = j.GetExclusiveMaximum()
 		s.Items.ExclusiveMinimum = j.GetExclusiveMinimum()
 	} else {
+		s.MaxLength = j.GetMaxLength()
+		s.MinLength = j.GetMinLength()
+		s.Pattern = j.GetPattern()
 		s.ReadOnly = j.GetReadOnly()
 		s.MultipleOf = j.GetMultipleOf()
 		s.Maximum = j.GetMaximum()

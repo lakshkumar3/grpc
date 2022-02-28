@@ -462,9 +462,10 @@ func TestMessageToQueryParametersWithOmitEnumDefaultValue(t *testing.T) {
 
 func TestMessageToQueryParameters(t *testing.T) {
 	type test struct {
-		MsgDescs []*descriptorpb.DescriptorProto
-		Message  string
-		Params   []openapiParameterObject
+		MsgDescs       []*descriptorpb.DescriptorProto
+		Message        string
+		Params         []openapiParameterObject
+		openAPIOptions []*openapiconfig.OpenAPIOptions
 	}
 
 	tests := []test{
@@ -597,13 +598,7 @@ func TestMessageToQueryParameters(t *testing.T) {
 		{
 			MsgDescs: []*descriptorpb.DescriptorProto{
 				{
-					Options: descriptorpb.MessageOptions{
-						MessageSetWireFormat:         nil,
-						NoStandardDescriptorAccessor: nil,
-						Deprecated:                   nil,
-						MapEntry:                     proto.Bool(true),
-						UninterpretedOption:          nil,
-					},
+
 					Name: proto.String("ExampleMessage"),
 					Field: []*descriptorpb.FieldDescriptorProto{
 						{
@@ -720,6 +715,92 @@ func TestMessageToQueryParameters(t *testing.T) {
 					CollectionFormat: "multi",
 				},
 			},
+			openAPIOptions: []*openapiconfig.OpenAPIOptions{
+				{
+					Message: []*openapiconfig.OpenAPIMessageOption{
+						{
+							Message: "example.Message",
+							Option: &openapi_options.Schema{
+								JsonSchema: &openapi_options.JSONSchema{
+									Title:            "title",
+									Description:      "desc",
+									MultipleOf:       100,
+									Maximum:          101,
+									ExclusiveMaximum: true,
+									Minimum:          1,
+									ExclusiveMinimum: true,
+									MaxLength:        10,
+									MinLength:        3,
+									Pattern:          "[a-z]+",
+									MaxItems:         20,
+									MinItems:         2,
+									UniqueItems:      true,
+									MaxProperties:    33,
+									MinProperties:    22,
+									Required:         []string{"req"},
+									ReadOnly:         true,
+								},
+							},
+						},
+					},
+				},
+				{
+					Message: []*openapiconfig.OpenAPIMessageOption{
+						{
+							Message: "example.Message",
+							Option: &openapi_options.Schema{
+								JsonSchema: &openapi_options.JSONSchema{
+									Title:            "title",
+									Description:      "desc",
+									MultipleOf:       100,
+									Maximum:          101,
+									ExclusiveMaximum: true,
+									Minimum:          1,
+									ExclusiveMinimum: true,
+									MaxLength:        10,
+									MinLength:        3,
+									Pattern:          "[a-z]+",
+									MaxItems:         20,
+									MinItems:         2,
+									UniqueItems:      true,
+									MaxProperties:    33,
+									MinProperties:    22,
+									Required:         []string{"req"},
+									ReadOnly:         true,
+								},
+							},
+						},
+					},
+				},
+				{
+					Message: []*openapiconfig.OpenAPIMessageOption{
+						{
+							Message: "example.Message",
+							Option: &openapi_options.Schema{
+								JsonSchema: &openapi_options.JSONSchema{
+									Title:            "title",
+									Description:      "desc",
+									MultipleOf:       100,
+									Maximum:          101,
+									ExclusiveMaximum: true,
+									Minimum:          1,
+									ExclusiveMinimum: true,
+									MaxLength:        10,
+									MinLength:        3,
+									Pattern:          "[a-z]+",
+									MaxItems:         20,
+									MinItems:         2,
+									UniqueItems:      true,
+									MaxProperties:    33,
+									MinProperties:    22,
+									Required:         []string{"req"},
+									ReadOnly:         true,
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 
@@ -757,6 +838,11 @@ func TestMessageToQueryParameters(t *testing.T) {
 		message, err := reg.LookupMsg("", ".example."+test.Message)
 		if err != nil {
 			t.Fatalf("failed to lookup message: %s", err)
+		}
+		if test.openAPIOptions != nil {
+			if err := reg.RegisterOpenAPIOptions(test.openAPIOptions[1]); err != nil {
+				t.Fatalf("failed to register OpenAPI options: %s", err)
+			}
 		}
 		params, err := messageToQueryParameters(message, reg, []descriptor.Parameter{}, nil)
 		if err != nil {
@@ -4314,7 +4400,6 @@ func TestRenderMessagesAsDefinition(t *testing.T) {
 
 	var requiredField = new(descriptorpb.FieldOptions)
 	proto.SetExtension(requiredField, openapi_options.E_Openapiv2Field, jsonSchema)
-
 	var fieldBehaviorRequired = []annotations.FieldBehavior{annotations.FieldBehavior_REQUIRED}
 	var requiredFieldOptions = new(descriptorpb.FieldOptions)
 	proto.SetExtension(requiredFieldOptions, annotations.E_FieldBehavior, fieldBehaviorRequired)
@@ -4330,92 +4415,155 @@ func TestRenderMessagesAsDefinition(t *testing.T) {
 		defs           openapiDefinitionsObject
 		openAPIOptions *openapiconfig.OpenAPIOptions
 		excludedFields []*descriptor.Field
-	}{
+	}{ /*
+		   {
+		       descr: "no OpenAPI options",
+		       msgDescs: []*descriptorpb.DescriptorProto{
+		           {Name: proto.String("Message")},
+		       },
+		       schema: map[string]openapi_options.Schema{},
+		       defs: map[string]openapiSchemaObject{
+		           "Message": {schemaCore: schemaCore{Type: "object"}},
+		       },
+		   },
+		   {
+		       descr: "example option",
+		       msgDescs: []*descriptorpb.DescriptorProto{
+		           {Name: proto.String("Message")},
+		       },
+		       schema: map[string]openapi_options.Schema{
+		           "Message": {
+		               Example: `{"foo":"bar"}`,
+		           },
+		       },
+		       defs: map[string]openapiSchemaObject{
+		           "Message": {schemaCore: schemaCore{
+		               Type:    "object",
+		               Example: json.RawMessage(`{"foo":"bar"}`),
+		           }},
+		       },
+		   },
+		   {
+		       descr: "example option with something non-json",
+		       msgDescs: []*descriptorpb.DescriptorProto{
+		           {Name: proto.String("Message")},
+		       },
+		       schema: map[string]openapi_options.Schema{
+		           "Message": {
+		               Example: `XXXX anything goes XXXX`,
+		           },
+		       },
+		       defs: map[string]openapiSchemaObject{
+		           "Message": {schemaCore: schemaCore{
+		               Type:    "object",
+		               Example: json.RawMessage(`XXXX anything goes XXXX`),
+		           }},
+		       },
+		   },
+		   {
+		       descr: "external docs option",
+		       msgDescs: []*descriptorpb.DescriptorProto{
+		           {Name: proto.String("Message")},
+		       },
+		       schema: map[string]openapi_options.Schema{
+		           "Message": {
+		               ExternalDocs: &openapi_options.ExternalDocumentation{
+		                   Description: "glorious docs",
+		                   Url:         "https://nada",
+		               },
+		           },
+		       },
+		       defs: map[string]openapiSchemaObject{
+		           "Message": {
+		               schemaCore: schemaCore{
+		                   Type: "object",
+		               },
+		               ExternalDocs: &openapiExternalDocumentationObject{
+		                   Description: "glorious docs",
+		                   URL:         "https://nada",
+		               },
+		           },
+		       },
+		   },
+		   {
+		       descr: "JSONSchema options",
+		       msgDescs: []*descriptorpb.DescriptorProto{
+		           {Name: proto.String("Message")},
+		       },
+		       schema: map[string]openapi_options.Schema{
+		           "Message": {
+		               JsonSchema: &openapi_options.JSONSchema{
+		                   Title:            "title",
+		                   Description:      "desc",
+		                   MultipleOf:       100,
+		                   Maximum:          101,
+		                   ExclusiveMaximum: true,
+		                   Minimum:          1,
+		                   ExclusiveMinimum: true,
+		                   MaxLength:        10,
+		                   MinLength:        3,
+		                   Pattern:          "[a-z]+",
+		                   MaxItems:         20,
+		                   MinItems:         2,
+		                   UniqueItems:      true,
+		                   MaxProperties:    33,
+		                   MinProperties:    22,
+		                   Required:         []string{"req"},
+		                   ReadOnly:         true,
+		               },
+		           },
+		       },
+		       defs: map[string]openapiSchemaObject{
+		           "Message": {
+		               schemaCore: schemaCore{
+		                   Type: "object",
+		               },
+		               Title:            "title",
+		               Description:      "desc",
+		               MultipleOf:       100,
+		               Maximum:          101,
+		               ExclusiveMaximum: true,
+		               Minimum:          1,
+		               ExclusiveMinimum: true,
+		               MaxLength:        10,
+		               MinLength:        3,
+		               Pattern:          "[a-z]+",
+		               MaxItems:         20,
+		               MinItems:         2,
+		               UniqueItems:      true,
+		               MaxProperties:    33,
+		               MinProperties:    22,
+		               Required:         []string{"req"},
+		               ReadOnly:         true,
+		           },
+		       },
+		   },*/
 		{
-			descr: "no OpenAPI options",
+			descr: "JSONSchema options for items",
 			msgDescs: []*descriptorpb.DescriptorProto{
-				{Name: proto.String("Message")},
-			},
-			schema: map[string]openapi_options.Schema{},
-			defs: map[string]openapiSchemaObject{
-				"Message": {schemaCore: schemaCore{Type: "object"}},
-			},
-		},
-		{
-			descr: "example option",
-			msgDescs: []*descriptorpb.DescriptorProto{
-				{Name: proto.String("Message")},
-			},
-			schema: map[string]openapi_options.Schema{
-				"Message": {
-					Example: `{"foo":"bar"}`,
-				},
-			},
-			defs: map[string]openapiSchemaObject{
-				"Message": {schemaCore: schemaCore{
-					Type:    "object",
-					Example: json.RawMessage(`{"foo":"bar"}`),
-				}},
-			},
-		},
-		{
-			descr: "example option with something non-json",
-			msgDescs: []*descriptorpb.DescriptorProto{
-				{Name: proto.String("Message")},
-			},
-			schema: map[string]openapi_options.Schema{
-				"Message": {
-					Example: `XXXX anything goes XXXX`,
-				},
-			},
-			defs: map[string]openapiSchemaObject{
-				"Message": {schemaCore: schemaCore{
-					Type:    "object",
-					Example: json.RawMessage(`XXXX anything goes XXXX`),
-				}},
-			},
-		},
-		{
-			descr: "external docs option",
-			msgDescs: []*descriptorpb.DescriptorProto{
-				{Name: proto.String("Message")},
-			},
-			schema: map[string]openapi_options.Schema{
-				"Message": {
-					ExternalDocs: &openapi_options.ExternalDocumentation{
-						Description: "glorious docs",
-						Url:         "https://nada",
+				{
+					Name: proto.String("Message"),
+					Field: []*descriptorpb.FieldDescriptorProto{
+						{
+							Name:   proto.String("first"),
+							Type:   descriptorpb.FieldDescriptorProto_TYPE_STRING.Enum(),
+							Label:  descriptorpb.FieldDescriptorProto_LABEL_REPEATED.Enum(),
+							Number: proto.Int32(1),
+						},
 					},
 				},
-			},
-			defs: map[string]openapiSchemaObject{
-				"Message": {
-					schemaCore: schemaCore{
-						Type: "object",
-					},
-					ExternalDocs: &openapiExternalDocumentationObject{
-						Description: "glorious docs",
-						URL:         "https://nada",
-					},
-				},
-			},
-		},
-		{
-			descr: "JSONSchema options",
-			msgDescs: []*descriptorpb.DescriptorProto{
-				{Name: proto.String("Message")},
 			},
 			schema: map[string]openapi_options.Schema{
 				"Message": {
 					JsonSchema: &openapi_options.JSONSchema{
-						Title:            "title",
-						Description:      "desc",
-						MultipleOf:       100,
-						Maximum:          101,
+						Title:            "laksh",
+						Description:      "desc items testing",
+						MultipleOf:       200,
+						Maximum:          201,
 						ExclusiveMaximum: true,
-						Minimum:          1,
+						Minimum:          2,
 						ExclusiveMinimum: true,
-						MaxLength:        10,
+						MaxLength:        15,
 						MinLength:        3,
 						Pattern:          "[a-z]+",
 						MaxItems:         20,
@@ -4423,7 +4571,6 @@ func TestRenderMessagesAsDefinition(t *testing.T) {
 						UniqueItems:      true,
 						MaxProperties:    33,
 						MinProperties:    22,
-						Required:         []string{"req"},
 						ReadOnly:         true,
 					},
 				},
@@ -4432,254 +4579,258 @@ func TestRenderMessagesAsDefinition(t *testing.T) {
 				"Message": {
 					schemaCore: schemaCore{
 						Type: "object",
-					},
-					Title:            "title",
-					Description:      "desc",
-					MultipleOf:       100,
-					Maximum:          101,
-					ExclusiveMaximum: true,
-					Minimum:          1,
-					ExclusiveMinimum: true,
-					MaxLength:        10,
-					MinLength:        3,
-					Pattern:          "[a-z]+",
-					MaxItems:         20,
-					MinItems:         2,
-					UniqueItems:      true,
-					MaxProperties:    33,
-					MinProperties:    22,
-					Required:         []string{"req"},
-					ReadOnly:         true,
-				},
-			},
-		},
-		{
-			descr: "JSONSchema options from registry",
-			msgDescs: []*descriptorpb.DescriptorProto{
-				{Name: proto.String("Message")},
-			},
-			openAPIOptions: &openapiconfig.OpenAPIOptions{
-				Message: []*openapiconfig.OpenAPIMessageOption{
-					{
-						Message: "example.Message",
-						Option: &openapi_options.Schema{
-							JsonSchema: &openapi_options.JSONSchema{
-								Title:            "title",
-								Description:      "desc",
-								MultipleOf:       100,
-								Maximum:          101,
-								ExclusiveMaximum: true,
-								Minimum:          1,
-								ExclusiveMinimum: true,
-								MaxLength:        10,
-								MinLength:        3,
-								Pattern:          "[a-z]+",
-								MaxItems:         20,
-								MinItems:         2,
-								UniqueItems:      true,
-								MaxProperties:    33,
-								MinProperties:    22,
-								Required:         []string{"req"},
-								ReadOnly:         true,
-							},
+						Items: &openapiItemsObject{
+							schemaCore:       schemaCore{Type: "string"},
+							MultipleOf:       200,
+							Maximum:          201,
+							ExclusiveMaximum: true,
+							Minimum:          2,
+							ExclusiveMinimum: true,
+							MaxLength:        15,
+							MinLength:        3,
+							Pattern:          "[a-z]+",
+							UniqueItems:      true,
+							MaxProperties:    33,
+							MinProperties:    22,
+							Required:         []string{"req"},
+							ReadOnly:         true,
 						},
-					},
-				},
-			},
-			defs: map[string]openapiSchemaObject{
-				"Message": {
-					schemaCore: schemaCore{
-						Type: "object",
-					},
-					Title:            "title",
-					Description:      "desc",
-					MultipleOf:       100,
-					Maximum:          101,
-					ExclusiveMaximum: true,
-					Minimum:          1,
-					ExclusiveMinimum: true,
-					MaxLength:        10,
-					MinLength:        3,
-					Pattern:          "[a-z]+",
-					MaxItems:         20,
-					MinItems:         2,
-					UniqueItems:      true,
-					MaxProperties:    33,
-					MinProperties:    22,
-					Required:         []string{"req"},
-					ReadOnly:         true,
-				},
-			},
-		},
-		{
-			descr: "JSONSchema with required properties",
-			msgDescs: []*descriptorpb.DescriptorProto{
-				{
-					Name: proto.String("Message"),
-					Field: []*descriptorpb.FieldDescriptorProto{
-						{
-							Name:    proto.String("aRequiredField"),
-							Type:    descriptorpb.FieldDescriptorProto_TYPE_STRING.Enum(),
-							Number:  proto.Int32(1),
-							Options: requiredField,
-						},
-					},
-				},
-			},
-			schema: map[string]openapi_options.Schema{
-				"Message": {
-					JsonSchema: &openapi_options.JSONSchema{
-						Title:       "title",
-						Description: "desc",
-						Required:    []string{"req"},
-					},
-				},
-			},
-			defs: map[string]openapiSchemaObject{
-				"Message": {
-					schemaCore: schemaCore{
-						Type: "object",
 					},
 					Title:       "title",
 					Description: "desc",
-					Required:    []string{"req", "aRequiredField"},
-					Properties: &openapiSchemaObjectProperties{
-						{
-							Key: "aRequiredField",
-							Value: openapiSchemaObject{
-								schemaCore: schemaCore{
-									Type: "string",
-								},
-								Description: "field description",
-								Title:       "field title",
-								Required:    []string{"aRequiredField"},
-							},
-						},
-					},
+					MaxItems:    20,
+					MinItems:    2,
 				},
 			},
-		},
-		{
-			descr: "JSONSchema with excluded fields",
-			msgDescs: []*descriptorpb.DescriptorProto{
-				{
-					Name: proto.String("Message"),
-					Field: []*descriptorpb.FieldDescriptorProto{
-						{
-							Name:    proto.String("aRequiredField"),
-							Type:    descriptorpb.FieldDescriptorProto_TYPE_STRING.Enum(),
-							Number:  proto.Int32(1),
-							Options: requiredField,
-						},
-						{
-							Name:   proto.String("anExcludedField"),
-							Type:   descriptorpb.FieldDescriptorProto_TYPE_STRING.Enum(),
-							Number: proto.Int32(2),
-						},
-					},
-				},
-			},
-			schema: map[string]openapi_options.Schema{
-				"Message": {
-					JsonSchema: &openapi_options.JSONSchema{
-						Title:       "title",
-						Description: "desc",
-						Required:    []string{"req"},
-					},
-				},
-			},
-			defs: map[string]openapiSchemaObject{
-				"Message": {
-					schemaCore: schemaCore{
-						Type: "object",
-					},
-					Title:       "title",
-					Description: "desc",
-					Required:    []string{"req", "aRequiredField"},
-					Properties: &openapiSchemaObjectProperties{
-						{
-							Key: "aRequiredField",
-							Value: openapiSchemaObject{
-								schemaCore: schemaCore{
-									Type: "string",
-								},
-								Description: "field description",
-								Title:       "field title",
-								Required:    []string{"aRequiredField"},
-							},
-						},
-					},
-				},
-			},
-			excludedFields: []*descriptor.Field{
-				{
-					FieldDescriptorProto: &descriptorpb.FieldDescriptorProto{
-						Name: strPtr("anExcludedField"),
-					},
-				},
-			},
-		},
-		{
-			descr: "JSONSchema with required properties via field_behavior",
-			msgDescs: []*descriptorpb.DescriptorProto{
-				{
-					Name: proto.String("Message"),
-					Field: []*descriptorpb.FieldDescriptorProto{
-						{
-							Name:    proto.String("aRequiredField"),
-							Type:    descriptorpb.FieldDescriptorProto_TYPE_STRING.Enum(),
-							Number:  proto.Int32(1),
-							Options: requiredFieldOptions,
-						},
-						{
-							Name:    proto.String("aOutputOnlyField"),
-							Type:    descriptorpb.FieldDescriptorProto_TYPE_STRING.Enum(),
-							Number:  proto.Int32(2),
-							Options: fieldBehaviorOutputOnlyOptions,
-						},
-					},
-				},
-			},
-			schema: map[string]openapi_options.Schema{
-				"Message": {
-					JsonSchema: &openapi_options.JSONSchema{
-						Title:       "title",
-						Description: "desc",
-						Required:    []string{"req"},
-					},
-				},
-			},
-			defs: map[string]openapiSchemaObject{
-				"Message": {
-					schemaCore: schemaCore{
-						Type: "object",
-					},
-					Title:       "title",
-					Description: "desc",
-					Required:    []string{"req", "aRequiredField"},
-					Properties: &openapiSchemaObjectProperties{
-						{
-							Key: "aRequiredField",
-							Value: openapiSchemaObject{
-								schemaCore: schemaCore{
-									Type: "string",
-								},
-								Required: []string{"aRequiredField"},
-							},
-						},
-						{
-							Key: "aOutputOnlyField",
-							Value: openapiSchemaObject{
-								schemaCore: schemaCore{
-									Type: "string",
-								},
-								ReadOnly: true,
-							},
-						},
-					},
-				},
-			},
-		},
+		}, /*
+
+		   {
+		       descr: "JSONSchema options from registry",
+		       msgDescs: []*descriptorpb.DescriptorProto{
+		           {Name: proto.String("Message")},
+		       },
+		       openAPIOptions: &openapiconfig.OpenAPIOptions{
+		           Message: []*openapiconfig.OpenAPIMessageOption{
+		               {
+		                   Message: "example.Message",
+		                   Option: &openapi_options.Schema{
+		                       JsonSchema: &openapi_options.JSONSchema{
+		                           Title:            "title",
+		                           Description:      "desc",
+		                           MultipleOf:       100,
+		                           Maximum:          101,
+		                           ExclusiveMaximum: true,
+		                           Minimum:          1,
+		                           ExclusiveMinimum: true,
+		                           MaxLength:        10,
+		                           MinLength:        3,
+		                           Pattern:          "[a-z]+",
+		                           MaxItems:         20,
+		                           MinItems:         2,
+		                           UniqueItems:      true,
+		                           MaxProperties:    33,
+		                           MinProperties:    22,
+		                           Required:         []string{"req"},
+		                           ReadOnly:         true,
+		                       },
+		                   },
+		               },
+		           },
+		       },
+		       defs: map[string]openapiSchemaObject{
+		           "Message": {
+		               schemaCore: schemaCore{
+		                   Type: "object",
+		               },
+		               Title:            "title",
+		               Description:      "desc",
+		               MultipleOf:       100,
+		               Maximum:          101,
+		               ExclusiveMaximum: true,
+		               Minimum:          1,
+		               ExclusiveMinimum: true,
+		               MaxLength:        10,
+		               MinLength:        3,
+		               Pattern:          "[a-z]+",
+		               MaxItems:         20,
+		               MinItems:         2,
+		               UniqueItems:      true,
+		               MaxProperties:    33,
+		               MinProperties:    22,
+		               Required:         []string{"req"},
+		               ReadOnly:         true,
+		           },
+		       },
+		   },
+		   {
+		       descr: "JSONSchema with required properties",
+		       msgDescs: []*descriptorpb.DescriptorProto{
+		           {
+		               Name: proto.String("Message"),
+		               Field: []*descriptorpb.FieldDescriptorProto{
+		                   {
+		                       Name:    proto.String("aRequiredField"),
+		                       Type:    descriptorpb.FieldDescriptorProto_TYPE_STRING.Enum(),
+		                       Number:  proto.Int32(1),
+		                       Options: requiredField,
+		                   },
+		               },
+		           },
+		       },
+		       schema: map[string]openapi_options.Schema{
+		           "Message": {
+		               JsonSchema: &openapi_options.JSONSchema{
+		                   Title:       "title",
+		                   Description: "desc",
+		                   Required:    []string{"req"},
+		               },
+		           },
+		       },
+		       defs: map[string]openapiSchemaObject{
+		           "Message": {
+		               schemaCore: schemaCore{
+		                   Type: "object",
+		               },
+		               Title:       "title",
+		               Description: "desc",
+		               Required:    []string{"req", "aRequiredField"},
+		               Properties: &openapiSchemaObjectProperties{
+		                   {
+		                       Key: "aRequiredField",
+		                       Value: openapiSchemaObject{
+		                           schemaCore: schemaCore{
+		                               Type: "string",
+		                           },
+		                           Description: "field description",
+		                           Title:       "field title",
+		                           Required:    []string{"aRequiredField"},
+		                       },
+		                   },
+		               },
+		           },
+		       },
+		   },
+		   {
+		       descr: "JSONSchema with excluded fields",
+		       msgDescs: []*descriptorpb.DescriptorProto{
+		           {
+		               Name: proto.String("Message"),
+		               Field: []*descriptorpb.FieldDescriptorProto{
+		                   {
+		                       Name:    proto.String("aRequiredField"),
+		                       Type:    descriptorpb.FieldDescriptorProto_TYPE_STRING.Enum(),
+		                       Number:  proto.Int32(1),
+		                       Options: requiredField,
+		                   },
+		                   {
+		                       Name:   proto.String("anExcludedField"),
+		                       Type:   descriptorpb.FieldDescriptorProto_TYPE_STRING.Enum(),
+		                       Number: proto.Int32(2),
+		                   },
+		               },
+		           },
+		       },
+		       schema: map[string]openapi_options.Schema{
+		           "Message": {
+		               JsonSchema: &openapi_options.JSONSchema{
+		                   Title:       "title",
+		                   Description: "desc",
+		                   Required:    []string{"req"},
+		               },
+		           },
+		       },
+		       defs: map[string]openapiSchemaObject{
+		           "Message": {
+		               schemaCore: schemaCore{
+		                   Type: "object",
+		               },
+		               Title:       "title",
+		               Description: "desc",
+		               Required:    []string{"req", "aRequiredField"},
+		               Properties: &openapiSchemaObjectProperties{
+		                   {
+		                       Key: "aRequiredField",
+		                       Value: openapiSchemaObject{
+		                           schemaCore: schemaCore{
+		                               Type: "string",
+		                           },
+		                           Description: "field description",
+		                           Title:       "field title",
+		                           Required:    []string{"aRequiredField"},
+		                       },
+		                   },
+		               },
+		           },
+		       },
+		       excludedFields: []*descriptor.Field{
+		           {
+		               FieldDescriptorProto: &descriptorpb.FieldDescriptorProto{
+		                   Name: strPtr("anExcludedField"),
+		               },
+		           },
+		       },
+		   },
+		   {
+		       descr: "JSONSchema with required properties via field_behavior",
+		       msgDescs: []*descriptorpb.DescriptorProto{
+		           {
+		               Name: proto.String("Message"),
+		               Field: []*descriptorpb.FieldDescriptorProto{
+		                   {
+		                       Name:    proto.String("aRequiredField"),
+		                       Type:    descriptorpb.FieldDescriptorProto_TYPE_STRING.Enum(),
+		                       Number:  proto.Int32(1),
+		                       Options: requiredFieldOptions,
+		                   },
+		                   {
+		                       Name:    proto.String("aOutputOnlyField"),
+		                       Type:    descriptorpb.FieldDescriptorProto_TYPE_STRING.Enum(),
+		                       Number:  proto.Int32(2),
+		                       Options: fieldBehaviorOutputOnlyOptions,
+		                   },
+		               },
+		           },
+		       },
+		       schema: map[string]openapi_options.Schema{
+		           "Message": {
+		               JsonSchema: &openapi_options.JSONSchema{
+		                   Title:       "title",
+		                   Description: "desc",
+		                   Required:    []string{"req"},
+		               },
+		           },
+		       },
+		       defs: map[string]openapiSchemaObject{
+		           "Message": {
+		               schemaCore: schemaCore{
+		                   Type: "object",
+		               },
+		               Title:       "title",
+		               Description: "desc",
+		               Required:    []string{"req", "aRequiredField"},
+		               Properties: &openapiSchemaObjectProperties{
+		                   {
+		                       Key: "aRequiredField",
+		                       Value: openapiSchemaObject{
+		                           schemaCore: schemaCore{
+		                               Type: "string",
+		                           },
+		                           Required: []string{"aRequiredField"},
+		                       },
+		                   },
+		                   {
+		                       Key: "aOutputOnlyField",
+		                       Value: openapiSchemaObject{
+		                           schemaCore: schemaCore{
+		                               Type: "string",
+		                           },
+		                           ReadOnly: true,
+		                       },
+		                   },
+		               },
+		           },
+		       },
+		   },*/
 	}
 
 	for _, test := range tests {
